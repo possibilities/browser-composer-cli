@@ -1,1 +1,1 @@
-# Commander.js Template
+# Browser Composer

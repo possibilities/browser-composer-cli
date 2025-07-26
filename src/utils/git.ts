@@ -5,7 +5,10 @@ import { KERNEL_IMAGES_REPO } from './constants.js'
 import { getLocalKernelImagesPath } from './paths.js'
 const { existsSync, copySync } = fse
 
-export const cloneOrUpdateRepo = async (targetDir: string) => {
+export const cloneOrUpdateRepo = async (
+  targetDir: string,
+  debug: boolean = false,
+) => {
   const localKernelImages = getLocalKernelImagesPath()
 
   // If local kernel-images exists, copy from there to get local changes
@@ -30,11 +33,14 @@ export const cloneOrUpdateRepo = async (targetDir: string) => {
 
     if (existsSync(gitDir)) {
       console.log('Updating existing repository...')
-      await execa('git', ['pull'], { cwd: targetDir, stdio: 'inherit' })
+      await execa('git', ['pull'], {
+        cwd: targetDir,
+        stdio: debug ? 'inherit' : 'pipe',
+      })
     } else {
       console.log('Cloning kernel-images repository...')
       await execa('git', ['clone', KERNEL_IMAGES_REPO, targetDir], {
-        stdio: 'inherit',
+        stdio: debug ? 'inherit' : 'pipe',
       })
     }
   }

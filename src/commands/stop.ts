@@ -9,12 +9,13 @@ export const stopCommand = new Command('stop')
   .description('Stop running browser containers')
   .option('-p, --profile <name>', 'Profile name to stop', 'default')
   .option('-a, --all', 'Stop all running containers')
+  .option('-d, --debug', 'Show debug output')
   .action(async options => {
     try {
       if (options.all) {
-        await stopAllContainers()
+        await stopAllContainers(options.debug)
       } else {
-        await stopSingleContainer(options.profile)
+        await stopSingleContainer(options.profile, options.debug)
       }
     } catch (error) {
       if (error instanceof ContainerError) {
@@ -26,7 +27,10 @@ export const stopCommand = new Command('stop')
     }
   })
 
-async function stopSingleContainer(profileName: string) {
+async function stopSingleContainer(
+  profileName: string,
+  debug: boolean = false,
+) {
   validateProfileName(profileName)
   const containerName = `${CONTAINER_PREFIX}-${profileName}`
 
@@ -37,11 +41,11 @@ async function stopSingleContainer(profileName: string) {
   }
 
   console.log(chalk.yellow(`Stopping container: ${containerName}`))
-  await stopContainer(containerName)
+  await stopContainer(containerName, debug)
   console.log(chalk.green(`✓ Successfully stopped ${containerName}`))
 }
 
-async function stopAllContainers() {
+async function stopAllContainers(debug: boolean = false) {
   try {
     const { stdout } = await execa('docker', ['ps', '--format', '{{.Names}}'])
     const runningContainers = stdout.split('\n').filter(Boolean)
@@ -60,7 +64,7 @@ async function stopAllContainers() {
 
     for (const containerName of ourContainers) {
       console.log(chalk.gray(`  Stopping ${containerName}...`))
-      await stopContainer(containerName)
+      await stopContainer(containerName, debug)
     }
 
     console.log(chalk.green(`✓ Successfully stopped all containers`))

@@ -20,7 +20,11 @@ export const imageExists = async (imageName: string): Promise<boolean> => {
   }
 }
 
-export const buildImage = async (buildDir: string, imageName: string) => {
+export const buildImage = async (
+  buildDir: string,
+  imageName: string,
+  debug: boolean = false,
+) => {
   const scriptPath = path.join(
     buildDir,
     'images',
@@ -34,7 +38,7 @@ export const buildImage = async (buildDir: string, imageName: string) => {
       ...process.env,
       IMAGE: imageName,
     },
-    stdio: 'inherit',
+    stdio: debug ? 'inherit' : 'pipe',
   })
 }
 
@@ -45,6 +49,7 @@ export interface RunContainerResult {
 
 export const runContainer = async (
   options: DockerRunOptions,
+  debug: boolean = false,
 ): Promise<RunContainerResult> => {
   const {
     containerName,
@@ -107,10 +112,10 @@ export const runContainer = async (
     imageName,
   ]
 
-  await stopContainer(containerName)
+  await stopContainer(containerName, false)
 
   const subprocess = execa('docker', runArgs, {
-    stdio: 'inherit',
+    stdio: debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
     cleanup: false,
   })
 
@@ -121,9 +126,14 @@ export const runContainer = async (
   return { subprocess, ports }
 }
 
-export const stopContainer = async (containerName: string) => {
+export const stopContainer = async (
+  containerName: string,
+  debug: boolean = false,
+) => {
   try {
-    await execa('docker', ['rm', '-f', containerName])
+    await execa('docker', ['rm', '-f', containerName], {
+      stdio: debug ? 'inherit' : 'pipe',
+    })
   } catch {}
 }
 
@@ -185,7 +195,7 @@ export const cleanupOrphanedContainers = async (): Promise<void> => {
         console.log(
           chalk.yellow(`Removing orphaned container: ${containerName}`),
         )
-        await stopContainer(containerName)
+        await stopContainer(containerName, false)
       }
     }
   } catch (error) {
@@ -196,14 +206,17 @@ export const cleanupOrphanedContainers = async (): Promise<void> => {
   }
 }
 
-export const ensureDockerImage = async (imageName: string): Promise<void> => {
+export const ensureDockerImage = async (
+  imageName: string,
+  debug: boolean = false,
+): Promise<void> => {
   if (!(await imageExists(imageName))) {
     console.log(chalk.yellow('Docker image not found. Building...'))
     const buildDir = getTempBuildDir()
 
     try {
-      await cloneOrUpdateRepo(buildDir)
-      await buildImage(buildDir, imageName)
+      await cloneOrUpdateRepo(buildDir, debug)
+      await buildImage(buildDir, imageName, debug)
     } catch (error) {
       throw new DockerError(
         `Failed to build Docker image: ${error}`,

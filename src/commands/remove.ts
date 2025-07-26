@@ -14,13 +14,14 @@ export const removeCommand = new Command('remove')
   .option('-p, --profile <name>', 'Profile name to remove')
   .option('-a, --all', 'Remove all browser profiles')
   .option('-f, --force', 'Skip confirmation prompt')
+  .option('-d, --debug', 'Show debug output')
   .action(async options => {
     try {
       if (options.all) {
-        await removeAllProfiles(options.force)
+        await removeAllProfiles(options.force, options.debug)
       } else if (options.profile) {
         validateProfileName(options.profile)
-        await removeProfile(options.profile, options.force)
+        await removeProfile(options.profile, options.force, options.debug)
       } else {
         console.error(
           chalk.red('Error: Either --profile <name> or --all is required'),
@@ -47,7 +48,11 @@ export const removeCommand = new Command('remove')
     }
   })
 
-async function removeProfile(profileName: string, force: boolean = false) {
+async function removeProfile(
+  profileName: string,
+  force: boolean = false,
+  debug: boolean = false,
+) {
   const sessionDir = getSessionDir(profileName)
 
   if (!existsSync(sessionDir)) {
@@ -66,7 +71,7 @@ async function removeProfile(profileName: string, force: boolean = false) {
 
   if (await containerIsRunning(containerName)) {
     console.log(chalk.yellow(`Stopping container: ${containerName}`))
-    await stopContainer(containerName)
+    await stopContainer(containerName, debug)
   }
 
   console.log(chalk.yellow(`Removing profile: ${profileName}`))
@@ -100,7 +105,10 @@ async function confirmRemoval(profileName: string): Promise<boolean> {
   })
 }
 
-async function removeAllProfiles(force: boolean = false) {
+async function removeAllProfiles(
+  force: boolean = false,
+  debug: boolean = false,
+) {
   const sessionsDir = getSessionsDir()
   const profiles = readdirSync(sessionsDir).filter((name: string) => {
     const profilePath = path.join(sessionsDir, name)
@@ -132,7 +140,7 @@ async function removeAllProfiles(force: boolean = false) {
 
     if (await containerIsRunning(containerName)) {
       console.log(chalk.gray(`  Stopping container: ${containerName}`))
-      await stopContainer(containerName)
+      await stopContainer(containerName, debug)
     }
 
     const sessionDir = getSessionDir(profileName)

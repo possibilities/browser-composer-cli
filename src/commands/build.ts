@@ -8,7 +8,8 @@ import { DockerError, toError } from '../utils/errors.js'
 
 export const buildCommand = new Command('build')
   .description('Build the browser Docker image')
-  .action(async () => {
+  .option('-d, --debug', 'Show debug output')
+  .action(async options => {
     try {
       if (await imageExists(DOCKER_IMAGE_NAME)) {
         console.log(chalk.yellow(`Image ${DOCKER_IMAGE_NAME} already exists`))
@@ -19,8 +20,8 @@ export const buildCommand = new Command('build')
       const buildDir = getTempBuildDir()
 
       try {
-        await cloneOrUpdateRepo(buildDir)
-        await buildImage(buildDir, DOCKER_IMAGE_NAME)
+        await cloneOrUpdateRepo(buildDir, options.debug)
+        await buildImage(buildDir, DOCKER_IMAGE_NAME, options.debug)
         console.log(chalk.green(`✓ Successfully built ${DOCKER_IMAGE_NAME}`))
       } catch (error) {
         throw new DockerError(

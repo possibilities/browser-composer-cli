@@ -8,7 +8,6 @@ import {
   ensureDockerImage,
 } from '../utils/docker.js'
 import { getSessionMetadataPath } from '../utils/paths.js'
-import { setupGracefulShutdown } from '../utils/process.js'
 import {
   DOCKER_IMAGE_NAME,
   CONTAINER_PREFIX,
@@ -27,6 +26,7 @@ import {
 export const restartCommand = new Command('restart')
   .description('Restart an existing browser profile')
   .option('-p, --profile <name>', 'Profile name to restart', 'default')
+  .option('-d, --debug', 'Show debug output')
   .action(async options => {
     try {
       const sessionName = options.profile
@@ -42,9 +42,9 @@ export const restartCommand = new Command('restart')
       }
 
       console.log(chalk.yellow(`Stopping existing container if running...`))
-      await stopContainer(containerName)
+      await stopContainer(containerName, options.debug)
 
-      await ensureDockerImage(DOCKER_IMAGE_NAME)
+      await ensureDockerImage(DOCKER_IMAGE_NAME, options.debug)
 
       metadata.lastUsed = new Date().toISOString()
       writeJsonSync(metadataPath, metadata, { spaces: 2 })
@@ -58,16 +58,19 @@ export const restartCommand = new Command('restart')
       // Clean any stale Chrome lock files
       cleanChromeLockFiles(metadata.chromeUserDataPath)
 
-      const { subprocess: dockerProcess, ports } = await runContainer({
-        containerName,
-        imageName: DOCKER_IMAGE_NAME,
-        sessionName,
-        chromeUserDataDir: metadata.chromeUserDataPath,
-        recordingsDir: metadata.recordingsPath,
-        chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
-        width: DEFAULT_WIDTH,
-        height: DEFAULT_HEIGHT,
-      })
+      const { subprocess: dockerProcess, ports } = await runContainer(
+        {
+          containerName,
+          imageName: DOCKER_IMAGE_NAME,
+          sessionName,
+          chromeUserDataDir: metadata.chromeUserDataPath,
+          recordingsDir: metadata.recordingsPath,
+          chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
+          width: DEFAULT_WIDTH,
+          height: DEFAULT_HEIGHT,
+        },
+        options.debug,
+      )
 
       console.log(chalk.blue('Browser is available at:'))
       console.log(
@@ -78,8 +81,6 @@ export const restartCommand = new Command('restart')
       )
       console.log(chalk.blue(`  - API: http://localhost:${ports.apiPort}`))
       console.log()
-
-      setupGracefulShutdown(dockerProcess, containerName)
 
       try {
         await dockerProcess

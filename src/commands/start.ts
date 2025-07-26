@@ -12,7 +12,6 @@ import {
   getRecordingsDir,
   getSessionMetadataPath,
 } from '../utils/paths.js'
-import { setupGracefulShutdown } from '../utils/process.js'
 import {
   DOCKER_IMAGE_NAME,
   CONTAINER_PREFIX,
@@ -31,6 +30,7 @@ import {
 export const startCommand = new Command('start')
   .description('Start a new browser container')
   .option('-p, --profile <name>', 'Profile name for persistent browser data')
+  .option('-d, --debug', 'Show debug output')
   .action(async options => {
     try {
       const sessionName = options.profile || 'default'
@@ -45,7 +45,7 @@ export const startCommand = new Command('start')
         process.exit(1)
       }
 
-      await ensureDockerImage(DOCKER_IMAGE_NAME)
+      await ensureDockerImage(DOCKER_IMAGE_NAME, options.debug)
 
       const chromeUserDataDir = getChromeUserDataDir(sessionName)
       const recordingsDir = getRecordingsDir(sessionName)
@@ -75,16 +75,19 @@ export const startCommand = new Command('start')
       // Clean any stale Chrome lock files
       cleanChromeLockFiles(chromeUserDataDir)
 
-      const { subprocess: dockerProcess, ports } = await runContainer({
-        containerName,
-        imageName: DOCKER_IMAGE_NAME,
-        sessionName,
-        chromeUserDataDir,
-        recordingsDir,
-        chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
-        width: DEFAULT_WIDTH,
-        height: DEFAULT_HEIGHT,
-      })
+      const { subprocess: dockerProcess, ports } = await runContainer(
+        {
+          containerName,
+          imageName: DOCKER_IMAGE_NAME,
+          sessionName,
+          chromeUserDataDir,
+          recordingsDir,
+          chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
+          width: DEFAULT_WIDTH,
+          height: DEFAULT_HEIGHT,
+        },
+        options.debug,
+      )
 
       console.log(chalk.blue('Browser is available at:'))
       console.log(
@@ -95,8 +98,6 @@ export const startCommand = new Command('start')
       )
       console.log(chalk.blue(`  - API: http://localhost:${ports.apiPort}`))
       console.log()
-
-      setupGracefulShutdown(dockerProcess, containerName)
 
       try {
         await dockerProcess

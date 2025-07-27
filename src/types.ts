@@ -15,6 +15,7 @@ export interface DockerRunOptions {
   chromiumFlags: string
   width: number
   height: number
+  url?: string
 }
 
 export interface BuildOptions {

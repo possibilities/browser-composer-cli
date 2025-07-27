@@ -34,12 +34,13 @@ import {
 export const startCommand = new Command('start')
   .description('Start or attach to a browser container')
   .argument('<profile>', 'Profile name for persistent browser data')
+  .argument('[url]', 'Optional URL to open in the browser')
   .option('-d, --debug', 'Show debug output')
   .option(
     '--init-with-preset <name>',
     'Initialize new profile from preset (only applies on first run)',
   )
-  .action(async (profile, options) => {
+  .action(async (profile, url, options) => {
     try {
       const sessionName = profile
       validateProfileName(sessionName)
@@ -173,6 +174,7 @@ export const startCommand = new Command('start')
             chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
             width: DEFAULT_WIDTH,
             height: DEFAULT_HEIGHT,
+            url,
           },
           options.debug,
         )

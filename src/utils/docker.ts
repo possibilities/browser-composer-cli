@@ -59,11 +59,13 @@ export const runContainer = async (
     chromiumFlags,
     width,
     height,
+    url,
   } = options
 
   const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'browser-composer-'))
   const flagsFile = path.join(tmpDir, 'chromium-flags')
-  writeFileSync(flagsFile, chromiumFlags)
+  const finalChromiumFlags = url ? `${chromiumFlags} ${url}` : chromiumFlags
+  writeFileSync(flagsFile, finalChromiumFlags)
 
   // Allocate available ports
   const ports = await allocatePorts()

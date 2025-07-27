@@ -7,6 +7,7 @@ import {
   containerIsRunning,
   ensureDockerImage,
 } from '../utils/docker.js'
+import { execa } from 'execa'
 import {
   getChromeUserDataDir,
   getRecordingsDir,
@@ -28,7 +29,7 @@ import {
 } from '../utils/errors.js'
 
 export const startCommand = new Command('start')
-  .description('Start a new browser container')
+  .description('Start or attach to a browser container')
   .option('-p, --profile <name>', 'Profile name for persistent browser data')
   .option('-d, --debug', 'Show debug output')
   .action(async options => {
@@ -37,12 +38,52 @@ export const startCommand = new Command('start')
       validateProfileName(sessionName)
       const containerName = `${CONTAINER_PREFIX}-${sessionName}`
 
-      if (await containerIsRunning(containerName)) {
+      const isRunning = await containerIsRunning(containerName)
+
+      if (isRunning) {
         console.log(
-          chalk.yellow(`Container ${containerName} is already running`),
+          chalk.green(`Attaching to running container: ${containerName}`),
         )
-        console.log(chalk.blue('Use "browser-composer restart" to restart it'))
-        process.exit(1)
+
+        try {
+          const { stdout } = await execa('docker', ['port', containerName])
+          const portMappings = stdout.split('\n').filter(Boolean)
+
+          const extractPort = (mapping: string, defaultPort: string) =>
+            mapping.match(/:([0-9]+)$/)?.[1] || defaultPort
+
+          const ports = {
+            webrtcPort: extractPort(
+              portMappings.find(p => p.includes('8080/tcp')) || '',
+              '8080',
+            ),
+            devtoolsPort: extractPort(
+              portMappings.find(p => p.includes('9222/tcp')) || '',
+              '9222',
+            ),
+            apiPort: extractPort(
+              portMappings.find(p => p.includes('10001/tcp')) || '',
+              '10001',
+            ),
+          }
+
+          displayPortInfo(ports)
+        } catch (error) {
+          console.log(chalk.yellow('Could not retrieve port information'))
+        }
+
+        const attachProcess = execa('docker', ['attach', containerName], {
+          stdio: 'inherit',
+          cleanup: false,
+        })
+
+        try {
+          await attachProcess
+        } catch (error) {
+        } finally {
+          process.exit(0)
+        }
+        return
       }
 
       await ensureDockerImage(DOCKER_IMAGE_NAME, options.debug)
@@ -72,7 +113,6 @@ export const startCommand = new Command('start')
       console.log(chalk.gray(`Recordings: ${recordingsDir}`))
       console.log()
 
-      // Clean any stale Chrome lock files
       cleanChromeLockFiles(chromeUserDataDir)
 
       const { subprocess: dockerProcess, ports } = await runContainer(
@@ -89,15 +129,7 @@ export const startCommand = new Command('start')
         options.debug,
       )
 
-      console.log(chalk.blue('Browser is available at:'))
-      console.log(
-        chalk.blue(`  - WebRTC: http://localhost:${ports.webrtcPort}`),
-      )
-      console.log(
-        chalk.blue(`  - DevTools: http://localhost:${ports.devtoolsPort}`),
-      )
-      console.log(chalk.blue(`  - API: http://localhost:${ports.apiPort}`))
-      console.log()
+      displayPortInfo(ports)
 
       try {
         await dockerProcess
@@ -114,3 +146,19 @@ export const startCommand = new Command('start')
       process.exit(1)
     }
   })
+
+interface PortInfo {
+  webrtcPort: string | number
+  devtoolsPort: string | number
+  apiPort: string | number
+}
+
+function displayPortInfo(ports: PortInfo) {
+  console.log(chalk.blue('Browser is available at:'))
+  console.log(chalk.blue(`  - WebRTC: http://localhost:${ports.webrtcPort}`))
+  console.log(
+    chalk.blue(`  - DevTools: http://localhost:${ports.devtoolsPort}`),
+  )
+  console.log(chalk.blue(`  - API: http://localhost:${ports.apiPort}`))
+  console.log()
+}

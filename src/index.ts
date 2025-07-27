@@ -2,8 +2,6 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import packageJson from '../package.json' assert { type: 'json' }
 import { startCommand } from './commands/start.js'
-import { restartCommand } from './commands/restart.js'
-import { buildCommand } from './commands/build.js'
 import { listCommand } from './commands/list.js'
 import { stopCommand } from './commands/stop.js'
 import { removeCommand } from './commands/remove.js'
@@ -29,15 +27,11 @@ async function main() {
 
   program
     .name('browser-composer')
-    .description(
-      'Browser Composer - Manage browser containers with persistent profiles',
-    )
+    .description('Browser Composer CLI')
     .version(packageJson.version)
 
-  program.addCommand(startCommand)
-  program.addCommand(restartCommand)
-  program.addCommand(buildCommand)
   program.addCommand(listCommand)
+  program.addCommand(startCommand)
   program.addCommand(stopCommand)
   program.addCommand(removeCommand)
 

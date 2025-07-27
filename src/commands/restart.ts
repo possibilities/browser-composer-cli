@@ -84,7 +84,10 @@ export const restartCommand = new Command('restart')
 
       try {
         await dockerProcess
-      } catch (error) {}
+      } catch (error) {
+      } finally {
+        process.exit(0)
+      }
     } catch (error) {
       if (error instanceof ProfileNotFoundError) {
         console.error(chalk.red(error.message))

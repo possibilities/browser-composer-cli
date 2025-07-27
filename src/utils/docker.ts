@@ -119,7 +119,18 @@ export const runContainer = async (
     cleanup: false,
   })
 
+  const forwardSignalToDocker = (signal: NodeJS.Signals) => {
+    subprocess.kill(signal)
+  }
+
+  process.on('SIGINT', forwardSignalToDocker)
+  process.on('SIGTERM', forwardSignalToDocker)
+  process.on('SIGHUP', forwardSignalToDocker)
+
   subprocess.on('exit', () => {
+    process.removeListener('SIGINT', forwardSignalToDocker)
+    process.removeListener('SIGTERM', forwardSignalToDocker)
+    process.removeListener('SIGHUP', forwardSignalToDocker)
     removeSync(tmpDir)
   })
 

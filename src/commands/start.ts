@@ -101,7 +101,10 @@ export const startCommand = new Command('start')
 
       try {
         await dockerProcess
-      } catch (error) {}
+      } catch (error) {
+      } finally {
+        process.exit(0)
+      }
     } catch (error) {
       if (error instanceof DockerError || error instanceof ValidationError) {
         console.error(chalk.red(error.message))

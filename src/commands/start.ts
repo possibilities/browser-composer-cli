@@ -30,6 +30,10 @@ import {
   validateProfileName,
   validatePresetExists,
 } from '../utils/errors.js'
+import {
+  startConsoleLogging,
+  ConsoleLoggerResult,
+} from '../utils/consoleLogger.js'
 
 export const startCommand = new Command('start')
   .description('Start or attach to a browser container')
@@ -53,6 +57,7 @@ export const startCommand = new Command('start')
           chalk.green(`Attaching to running container: ${containerName}`),
         )
 
+        let devtoolsPort = '9222'
         try {
           const { stdout } = await execa('docker', ['port', containerName])
           const portMappings = stdout.split('\n').filter(Boolean)
@@ -75,15 +80,31 @@ export const startCommand = new Command('start')
             ),
           }
 
+          devtoolsPort = ports.devtoolsPort.toString()
           displayPortInfo(ports)
         } catch (error) {
           console.log(chalk.yellow('Could not retrieve port information'))
+        }
+
+        // Start console logging
+        let consoleLogger: ConsoleLoggerResult | null = null
+        try {
+          consoleLogger = await startConsoleLogging(sessionName, devtoolsPort)
+          console.error('Console logging started')
+        } catch (error) {
+          // Silently fail console logging to not interfere with container operation
         }
 
         const attachProcess = execa('docker', ['attach', containerName], {
           stdio: options.debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
           cleanup: false,
         })
+
+        const cleanup = async () => {
+          if (consoleLogger) {
+            await consoleLogger.cleanup()
+          }
+        }
 
         const forwardSignalToDocker = (signal: NodeJS.Signals) => {
           attachProcess.kill(signal)
@@ -93,16 +114,19 @@ export const startCommand = new Command('start')
         process.on('SIGTERM', forwardSignalToDocker)
         process.on('SIGHUP', forwardSignalToDocker)
 
-        attachProcess.on('exit', () => {
+        attachProcess.on('exit', async () => {
           process.removeListener('SIGINT', forwardSignalToDocker)
           process.removeListener('SIGTERM', forwardSignalToDocker)
           process.removeListener('SIGHUP', forwardSignalToDocker)
+          await cleanup()
         })
 
         try {
           await attachProcess
+          await cleanup()
           process.exit(0)
         } catch (error) {
+          await cleanup()
           const containerStillRunning = await containerIsRunning(containerName)
           if (!containerStillRunning) {
             console.log(chalk.yellow('Container stopped, restarting...'))
@@ -160,7 +184,6 @@ export const startCommand = new Command('start')
         console.log(chalk.gray(`Profile: ${sessionName}`))
         console.log(chalk.gray(`Chrome profile: ${chromeUserDataDir}`))
         console.log(chalk.gray(`Recordings: ${recordingsDir}`))
-        console.log()
 
         cleanChromeLockFiles(chromeUserDataDir)
 
@@ -181,6 +204,35 @@ export const startCommand = new Command('start')
 
         displayPortInfo(ports)
 
+        // Start console logging after a brief delay to allow Chrome to initialize
+        let consoleLogger: ConsoleLoggerResult | null = null
+        setTimeout(async () => {
+          try {
+            consoleLogger = await startConsoleLogging(
+              sessionName,
+              ports.devtoolsPort,
+            )
+            console.error('Console logging started')
+          } catch (error) {
+            // Silently fail console logging to not interfere with container operation
+          }
+        }, 3000)
+
+        const cleanup = async () => {
+          if (consoleLogger) {
+            await consoleLogger.cleanup()
+          }
+        }
+
+        // Handle cleanup on process exit
+        const handleExit = async () => {
+          await cleanup()
+          process.exit(0)
+        }
+
+        process.on('SIGINT', handleExit)
+        process.on('SIGTERM', handleExit)
+
         try {
           await dockerProcess
         } catch (error) {
@@ -188,6 +240,7 @@ export const startCommand = new Command('start')
             console.error(chalk.red('Docker process error:'), error)
           }
         } finally {
+          await cleanup()
           process.exit(0)
         }
       }
@@ -216,5 +269,4 @@ function displayPortInfo(ports: PortInfo) {
   console.log(
     chalk.blue(`  - Screen Recording API: http://localhost:${ports.apiPort}`),
   )
-  console.log()
 }

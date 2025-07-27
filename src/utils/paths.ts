@@ -62,3 +62,7 @@ export const getPresetDir = (presetName: string) => {
 export const getPresetMetadataPath = (presetName: string) => {
   return path.join(getPresetDir(presetName), 'metadata.json')
 }
+
+export const getConsoleDatabasePath = (profileName: string) => {
+  return path.join(getSessionDir(profileName), 'console.db')
+}

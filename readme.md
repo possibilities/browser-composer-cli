@@ -1,1 +1,1 @@
-# Browser Composer
+# Browser Composer CLI

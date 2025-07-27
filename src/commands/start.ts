@@ -81,8 +81,22 @@ export const startCommand = new Command('start')
         }
 
         const attachProcess = execa('docker', ['attach', containerName], {
-          stdio: 'inherit',
+          stdio: options.debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
           cleanup: false,
+        })
+
+        const forwardSignalToDocker = (signal: NodeJS.Signals) => {
+          attachProcess.kill(signal)
+        }
+
+        process.on('SIGINT', forwardSignalToDocker)
+        process.on('SIGTERM', forwardSignalToDocker)
+        process.on('SIGHUP', forwardSignalToDocker)
+
+        attachProcess.on('exit', () => {
+          process.removeListener('SIGINT', forwardSignalToDocker)
+          process.removeListener('SIGTERM', forwardSignalToDocker)
+          process.removeListener('SIGHUP', forwardSignalToDocker)
         })
 
         try {
@@ -190,6 +204,8 @@ function displayPortInfo(ports: PortInfo) {
   console.log(
     chalk.blue(`  - DevTools: http://localhost:${ports.devtoolsPort}`),
   )
-  console.log(chalk.blue(`  - API: http://localhost:${ports.apiPort}`))
+  console.log(
+    chalk.blue(`  - Screen Recording API: http://localhost:${ports.apiPort}`),
+  )
   console.log()
 }

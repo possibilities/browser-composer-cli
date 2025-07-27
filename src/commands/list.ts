@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import fse from 'fs-extra'
 import * as path from 'path'
 import chalk from 'chalk'
+import { execa } from 'execa'
 const { readdirSync, readJsonSync, statSync } = fse
 import { getSessionsDir } from '../utils/paths.js'
 import { containerIsRunning } from '../utils/docker.js'
@@ -56,6 +57,39 @@ export const listCommand = new Command('list')
               `  Last used: ${new Date(metadata.lastUsed).toLocaleString()}`,
             ),
           )
+
+          if (isRunning) {
+            try {
+              const { stdout } = await execa('docker', ['port', containerName])
+              const portMappings = stdout.split('\n').filter(Boolean)
+
+              const extractPort = (mapping: string, defaultPort: string) =>
+                mapping.match(/:([0-9]+)$/)?.[1] || defaultPort
+
+              const webrtcPort = extractPort(
+                portMappings.find(p => p.includes('8080/tcp')) || '',
+                '8080',
+              )
+              const devtoolsPort = extractPort(
+                portMappings.find(p => p.includes('9222/tcp')) || '',
+                '9222',
+              )
+              const apiPort = extractPort(
+                portMappings.find(p => p.includes('10001/tcp')) || '',
+                '10001',
+              )
+
+              console.log(chalk.gray(`  Ports:`))
+              console.log(chalk.gray(`    - WebRTC: localhost:${webrtcPort}`))
+              console.log(
+                chalk.gray(`    - DevTools: localhost:${devtoolsPort}`),
+              )
+              console.log(chalk.gray(`    - API: localhost:${apiPort}`))
+            } catch {
+              // If we can't get port info, just skip it
+            }
+          }
+
           console.log()
         } catch {
           console.log(

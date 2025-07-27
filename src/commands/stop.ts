@@ -7,15 +7,24 @@ import { ContainerError, validateProfileName } from '../utils/errors.js'
 
 export const stopCommand = new Command('stop')
   .description('Stop running browser containers')
-  .option('-p, --profile <name>', 'Profile name to stop', 'default')
+  .argument('[profile]', 'Profile name to stop')
   .option('-a, --all', 'Stop all running containers')
   .option('-d, --debug', 'Show debug output')
-  .action(async options => {
+  .action(async (profile, options) => {
     try {
       if (options.all) {
         await stopAllContainers(options.debug)
+      } else if (profile) {
+        await stopSingleContainer(profile, options.debug)
       } else {
-        await stopSingleContainer(options.profile, options.debug)
+        console.error(
+          chalk.red('Error: Either profile name or --all is required'),
+        )
+        console.log(
+          chalk.blue('Usage: browser-composer browser stop <profile>'),
+        )
+        console.log(chalk.blue('       browser-composer browser stop --all'))
+        process.exit(1)
       }
     } catch (error) {
       if (error instanceof ContainerError) {

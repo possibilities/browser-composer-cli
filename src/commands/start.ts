@@ -34,15 +34,15 @@ import {
 
 export const startCommand = new Command('start')
   .description('Start or attach to a browser container')
-  .option('-p, --profile <name>', 'Profile name for persistent browser data')
+  .argument('<profile>', 'Profile name for persistent browser data')
   .option('-d, --debug', 'Show debug output')
   .option(
     '--init-with-preset <name>',
     'Initialize new profile from preset (only applies on first run)',
   )
-  .action(async options => {
+  .action(async (profile, options) => {
     try {
-      const sessionName = options.profile || 'default'
+      const sessionName = profile
       validateProfileName(sessionName)
       const containerName = `${CONTAINER_PREFIX}-${sessionName}`
 

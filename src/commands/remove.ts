@@ -11,23 +11,23 @@ import { ProfileNotFoundError, validateProfileName } from '../utils/errors.js'
 
 export const removeCommand = new Command('remove')
   .description('Remove browser profiles and their data')
-  .option('-p, --profile <name>', 'Profile name to remove')
+  .argument('[profile]', 'Profile name to remove')
   .option('-a, --all', 'Remove all browser profiles')
   .option('-f, --force', 'Skip confirmation prompt')
   .option('-d, --debug', 'Show debug output')
-  .action(async options => {
+  .action(async (profile, options) => {
     try {
       if (options.all) {
         await removeAllProfiles(options.force, options.debug)
-      } else if (options.profile) {
-        validateProfileName(options.profile)
-        await removeProfile(options.profile, options.force, options.debug)
+      } else if (profile) {
+        validateProfileName(profile)
+        await removeProfile(profile, options.force, options.debug)
       } else {
         console.error(
-          chalk.red('Error: Either --profile <name> or --all is required'),
+          chalk.red('Error: Either profile name or --all is required'),
         )
         console.log(
-          chalk.blue('Usage: browser-composer browser remove --profile <name>'),
+          chalk.blue('Usage: browser-composer browser remove <profile>'),
         )
         console.log(chalk.blue('       browser-composer browser remove --all'))
         console.log(

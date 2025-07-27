@@ -22,7 +22,7 @@ export const listCommand = new Command('list')
         console.log(chalk.yellow('No profiles found'))
         console.log(
           chalk.blue(
-            'Use "browser-composer start --profile <name>" to create a profile',
+            'Use "browser-composer browser start --profile <name>" to create a profile',
           ),
         )
         return

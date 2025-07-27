@@ -1,10 +1,8 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
 import packageJson from '../package.json' assert { type: 'json' }
-import { startCommand } from './commands/start.js'
-import { listCommand } from './commands/list.js'
-import { stopCommand } from './commands/stop.js'
-import { removeCommand } from './commands/remove.js'
+import { browserCommand } from './commands/browser.js'
+import { presetCommand } from './commands/preset.js'
 import {
   checkDockerAvailable,
   cleanupOrphanedContainers,
@@ -30,10 +28,8 @@ async function main() {
     .description('Browser Composer CLI')
     .version(packageJson.version)
 
-  program.addCommand(listCommand)
-  program.addCommand(startCommand)
-  program.addCommand(stopCommand)
-  program.addCommand(removeCommand)
+  program.addCommand(browserCommand)
+  program.addCommand(presetCommand)
 
   try {
     program.exitOverride()

@@ -27,11 +27,13 @@ export const removeCommand = new Command('remove')
           chalk.red('Error: Either --profile <name> or --all is required'),
         )
         console.log(
-          chalk.blue('Usage: browser-composer remove --profile <name>'),
+          chalk.blue('Usage: browser-composer browser remove --profile <name>'),
         )
-        console.log(chalk.blue('       browser-composer remove --all'))
+        console.log(chalk.blue('       browser-composer browser remove --all'))
         console.log(
-          chalk.blue('Use "browser-composer list" to see available profiles'),
+          chalk.blue(
+            'Use "browser-composer browser list" to see available profiles',
+          ),
         )
         process.exit(1)
       }
@@ -39,7 +41,9 @@ export const removeCommand = new Command('remove')
       if (error instanceof ProfileNotFoundError) {
         console.error(chalk.red(error.message))
         console.log(
-          chalk.blue('Use "browser-composer list" to see available profiles'),
+          chalk.blue(
+            'Use "browser-composer browser list" to see available profiles',
+          ),
         )
       } else {
         console.error(chalk.red('Error:'), error)

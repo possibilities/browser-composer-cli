@@ -65,3 +65,31 @@ export const toError = (error: unknown): Error => {
 
   return new Error(String(error))
 }
+
+export const validatePresetName = (name: string): void => {
+  const validPattern = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+
+  if (!name || name.trim().length === 0) {
+    throw new ValidationError('Preset name cannot be empty')
+  }
+
+  if (name.length > 100) {
+    throw new ValidationError('Preset name must be 100 characters or less')
+  }
+
+  if (!validPattern.test(name)) {
+    throw new ValidationError(
+      'Preset name must start with a letter or number and contain only letters, numbers, hyphens, and underscores',
+    )
+  }
+}
+
+import fse from 'fs-extra'
+import { getPresetMetadataPath } from './paths.js'
+
+export const validatePresetExists = (presetName: string): void => {
+  const metadataPath = getPresetMetadataPath(presetName)
+  if (!fse.existsSync(metadataPath)) {
+    throw new ValidationError(`Preset "${presetName}" does not exist`)
+  }
+}

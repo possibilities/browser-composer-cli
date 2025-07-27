@@ -46,3 +46,19 @@ export const getTempBuildDir = () => {
 export const getLocalKernelImagesPath = () => {
   return path.join(os.homedir(), 'src', 'kernel-images')
 }
+
+export const getPresetsDir = () => {
+  const presetsDir = path.join(getAppDataDir(), 'presets')
+  ensureDirSync(presetsDir)
+  return presetsDir
+}
+
+export const getPresetDir = (presetName: string) => {
+  const presetDir = path.join(getPresetsDir(), presetName)
+  ensureDirSync(presetDir)
+  return presetDir
+}
+
+export const getPresetMetadataPath = (presetName: string) => {
+  return path.join(getPresetDir(presetName), 'metadata.json')
+}

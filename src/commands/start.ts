@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import fse from 'fs-extra'
 import chalk from 'chalk'
+import * as path from 'path'
 const { writeJsonSync, readJsonSync } = fse
 import {
   runContainer,
@@ -12,6 +13,8 @@ import {
   getChromeUserDataDir,
   getRecordingsDir,
   getSessionMetadataPath,
+  getPresetDir,
+  getPresetMetadataPath,
 } from '../utils/paths.js'
 import {
   DOCKER_IMAGE_NAME,
@@ -26,12 +29,17 @@ import {
   DockerError,
   ValidationError,
   validateProfileName,
+  validatePresetExists,
 } from '../utils/errors.js'
 
 export const startCommand = new Command('start')
   .description('Start or attach to a browser container')
   .option('-p, --profile <name>', 'Profile name for persistent browser data')
   .option('-d, --debug', 'Show debug output')
+  .option(
+    '--init-with-preset <name>',
+    'Initialize new profile from preset (only applies on first run)',
+  )
   .action(async options => {
     try {
       const sessionName = options.profile || 'default'
@@ -93,16 +101,39 @@ export const startCommand = new Command('start')
       const metadataPath = getSessionMetadataPath(sessionName)
 
       let metadata: SessionConfig
+      let isNewProfile = false
       try {
         metadata = readJsonSync(metadataPath)
         metadata.lastUsed = new Date().toISOString()
       } catch {
+        isNewProfile = true
         metadata = {
           name: sessionName,
           createdAt: new Date().toISOString(),
           lastUsed: new Date().toISOString(),
           chromeUserDataPath: chromeUserDataDir,
           recordingsPath: recordingsDir,
+        }
+
+        if (options.initWithPreset && isNewProfile) {
+          const presetName = options.initWithPreset
+          validatePresetExists(presetName)
+
+          const presetMetadataPath = getPresetMetadataPath(presetName)
+          readJsonSync(presetMetadataPath)
+          const presetDir = getPresetDir(presetName)
+
+          console.log(
+            chalk.green(`Initializing profile from preset: ${presetName}`),
+          )
+
+          const presetChromeDir = path.join(presetDir, 'chrome-user-data')
+          if (fse.existsSync(presetChromeDir)) {
+            console.log(chalk.gray('Copying Chrome data from preset...'))
+            fse.copySync(presetChromeDir, chromeUserDataDir, {
+              preserveTimestamps: true,
+            })
+          }
         }
       }
       writeJsonSync(metadataPath, metadata, { spaces: 2 })

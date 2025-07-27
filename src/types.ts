@@ -21,3 +21,10 @@ export interface BuildOptions {
   imageName: string
   buildDir: string
 }
+
+export interface PresetConfig {
+  name: string
+  description?: string
+  createdAt: string
+  sourceProfile: string
+}

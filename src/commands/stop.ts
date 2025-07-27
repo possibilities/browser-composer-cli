@@ -36,7 +36,9 @@ async function stopSingleContainer(
 
   if (!(await containerIsRunning(containerName))) {
     console.log(chalk.yellow(`Container ${containerName} is not running`))
-    console.log(chalk.blue('Use "browser-composer list" to see all profiles'))
+    console.log(
+      chalk.blue('Use "browser-composer browser list" to see all profiles'),
+    )
     return
   }
 

@@ -14,7 +14,6 @@ import {
   getRecordingsDir,
   getSessionMetadataPath,
   getPresetDir,
-  getPresetMetadataPath,
 } from '../utils/paths.js'
 import {
   DOCKER_IMAGE_NAME,
@@ -46,7 +45,7 @@ export const startCommand = new Command('start')
       validateProfileName(sessionName)
       const containerName = `${CONTAINER_PREFIX}-${sessionName}`
 
-      const isRunning = await containerIsRunning(containerName)
+      let isRunning = await containerIsRunning(containerName)
 
       if (isRunning) {
         console.log(
@@ -101,86 +100,94 @@ export const startCommand = new Command('start')
 
         try {
           await attachProcess
-        } catch (error) {
-        } finally {
           process.exit(0)
-        }
-        return
-      }
-
-      await ensureDockerImage(DOCKER_IMAGE_NAME, options.debug)
-
-      const chromeUserDataDir = getChromeUserDataDir(sessionName)
-      const recordingsDir = getRecordingsDir(sessionName)
-      const metadataPath = getSessionMetadataPath(sessionName)
-
-      let metadata: SessionConfig
-      let isNewProfile = false
-      try {
-        metadata = readJsonSync(metadataPath)
-        metadata.lastUsed = new Date().toISOString()
-      } catch {
-        isNewProfile = true
-        metadata = {
-          name: sessionName,
-          createdAt: new Date().toISOString(),
-          lastUsed: new Date().toISOString(),
-          chromeUserDataPath: chromeUserDataDir,
-          recordingsPath: recordingsDir,
-        }
-
-        if (options.initWithPreset && isNewProfile) {
-          const presetName = options.initWithPreset
-          validatePresetExists(presetName)
-
-          const presetMetadataPath = getPresetMetadataPath(presetName)
-          readJsonSync(presetMetadataPath)
-          const presetDir = getPresetDir(presetName)
-
-          console.log(
-            chalk.green(`Initializing profile from preset: ${presetName}`),
-          )
-
-          const presetChromeDir = path.join(presetDir, 'chrome-user-data')
-          if (fse.existsSync(presetChromeDir)) {
-            console.log(chalk.gray('Copying Chrome data from preset...'))
-            fse.copySync(presetChromeDir, chromeUserDataDir, {
-              preserveTimestamps: true,
-            })
+        } catch (error) {
+          const containerStillRunning = await containerIsRunning(containerName)
+          if (!containerStillRunning) {
+            console.log(chalk.yellow('Container stopped, restarting...'))
+            isRunning = false
+          } else {
+            process.exit(1)
           }
         }
       }
-      writeJsonSync(metadataPath, metadata, { spaces: 2 })
 
-      console.log(chalk.green(`Starting browser container: ${containerName}`))
-      console.log(chalk.gray(`Profile: ${sessionName}`))
-      console.log(chalk.gray(`Chrome profile: ${chromeUserDataDir}`))
-      console.log(chalk.gray(`Recordings: ${recordingsDir}`))
-      console.log()
+      if (!isRunning) {
+        await ensureDockerImage(DOCKER_IMAGE_NAME, options.debug)
 
-      cleanChromeLockFiles(chromeUserDataDir)
+        const chromeUserDataDir = getChromeUserDataDir(sessionName)
+        const recordingsDir = getRecordingsDir(sessionName)
+        const metadataPath = getSessionMetadataPath(sessionName)
 
-      const { subprocess: dockerProcess, ports } = await runContainer(
-        {
-          containerName,
-          imageName: DOCKER_IMAGE_NAME,
-          sessionName,
-          chromeUserDataDir,
-          recordingsDir,
-          chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
-          width: DEFAULT_WIDTH,
-          height: DEFAULT_HEIGHT,
-        },
-        options.debug,
-      )
+        let metadata: SessionConfig
+        let isNewProfile = false
+        try {
+          metadata = readJsonSync(metadataPath)
+          metadata.lastUsed = new Date().toISOString()
+        } catch {
+          isNewProfile = true
+          metadata = {
+            name: sessionName,
+            createdAt: new Date().toISOString(),
+            lastUsed: new Date().toISOString(),
+            chromeUserDataPath: chromeUserDataDir,
+            recordingsPath: recordingsDir,
+          }
 
-      displayPortInfo(ports)
+          if (options.initWithPreset && isNewProfile) {
+            const presetName = options.initWithPreset
+            validatePresetExists(presetName)
 
-      try {
-        await dockerProcess
-      } catch (error) {
-      } finally {
-        process.exit(0)
+            const presetDir = getPresetDir(presetName)
+
+            console.log(
+              chalk.green(`Initializing profile from preset: ${presetName}`),
+            )
+
+            const presetChromeDir = path.join(presetDir, 'chrome-user-data')
+            if (fse.existsSync(presetChromeDir)) {
+              console.log(chalk.gray('Copying Chrome data from preset...'))
+              fse.copySync(presetChromeDir, chromeUserDataDir, {
+                preserveTimestamps: true,
+              })
+            }
+          }
+        }
+        writeJsonSync(metadataPath, metadata, { spaces: 2 })
+
+        console.log(chalk.green(`Starting browser container: ${containerName}`))
+        console.log(chalk.gray(`Profile: ${sessionName}`))
+        console.log(chalk.gray(`Chrome profile: ${chromeUserDataDir}`))
+        console.log(chalk.gray(`Recordings: ${recordingsDir}`))
+        console.log()
+
+        cleanChromeLockFiles(chromeUserDataDir)
+
+        const { subprocess: dockerProcess, ports } = await runContainer(
+          {
+            containerName,
+            imageName: DOCKER_IMAGE_NAME,
+            sessionName,
+            chromeUserDataDir,
+            recordingsDir,
+            chromiumFlags: CHROMIUM_FLAGS_DEFAULT,
+            width: DEFAULT_WIDTH,
+            height: DEFAULT_HEIGHT,
+          },
+          options.debug,
+        )
+
+        displayPortInfo(ports)
+
+        try {
+          await dockerProcess
+        } catch (error) {
+          if (options.debug && error) {
+            console.error(chalk.red('Docker process error:'), error)
+          }
+        } finally {
+          process.exit(0)
+        }
       }
     } catch (error) {
       if (error instanceof DockerError || error instanceof ValidationError) {

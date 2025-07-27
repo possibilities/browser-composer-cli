@@ -5,7 +5,7 @@ export const DEFAULT_HEIGHT = 768
 export const KERNEL_IMAGES_REPO =
   'https://github.com/onkernel/kernel-images.git'
 export const CHROMIUM_FLAGS_DEFAULT =
-  '--user-data-dir=/home/kernel/user-data --disable-dev-shm-usage --disable-gpu --start-maximized --disable-software-rasterizer --remote-allow-origins=* --disable-session-crashed-bubble --disable-features=ProcessSingletonLock'
+  '--user-data-dir=/home/kernel/user-data --disable-dev-shm-usage --disable-gpu --start-maximized --disable-software-rasterizer --remote-allow-origins=* --disable-session-crashed-bubble --hide-crash-restore-bubble --disable-features=ProcessSingletonLock'
 export const BASE_WEBRTC_PORT = 8080
 export const BASE_DEVTOOLS_PORT = 9222
 export const BASE_API_PORT = 10001

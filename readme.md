@@ -7,7 +7,7 @@
 ## Features
 
 - Start a browser with a named profile, restart it later with the same profile state
-- Save a browser's profile state as a template and start new browsers with the template profile's state
+- Save a browser's profile state as a preset and start new browsers with the preset profile's state
 - Allows viewing console messages and taking screenshots
 - Exposes a webrtc based remote control interface
 - Exposes devtools port for connecting puppeteer, playwright,and friends

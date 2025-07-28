@@ -48,21 +48,12 @@ export const logsCommand = new Command('logs')
         schema: { consoleMessages, consoleClearMarkers },
       })
 
-      const levelColors: Record<string, (text: string) => string> = {
-        log: chalk.white,
-        info: chalk.blue,
-        warn: chalk.yellow,
-        error: chalk.red,
-        debug: chalk.gray,
-      }
-
       const formatLogEntry = (entry: typeof consoleMessages.$inferSelect) => {
-        const timestamp = new Date(entry.timestamp).toLocaleString()
-        const levelColor = levelColors[entry.level] || chalk.white
-        const level = levelColor(entry.level.toUpperCase().padEnd(5))
-        const url = entry.url ? chalk.gray(` [${entry.url}]`) : ''
+        const date = new Date(entry.timestamp)
+        const timestamp = date.toTimeString().split(' ')[0]
+        const level = entry.level.toUpperCase().padEnd(5)
 
-        return `${chalk.gray(timestamp)} ${level} ${entry.text}${url}`
+        return `${timestamp} ${level} ${entry.text}`
       }
 
       const buildWhereConditions = (

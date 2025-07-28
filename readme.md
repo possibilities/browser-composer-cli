@@ -1,6 +1,10 @@
 # Browser Composer CLI
 
+[![npm version](https://badge.fury.io/js/browser-composer.svg)](https://www.npmjs.com/package/browser-composer)
+
 > A CLI for managing browsers in containers
+
+## Features
 
 - Start a browser with a named profile, restart it later with the same profile state
 - Save a browser's profile state as a template and start new browsers with the template profile's state

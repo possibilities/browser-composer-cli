@@ -90,13 +90,13 @@ export const startBrowserCommand = new Command('start-browser')
         let consoleLogger: ConsoleLoggerResult | null = null
         try {
           consoleLogger = await startConsoleLogging(sessionName, devtoolsPort)
-          console.error('Console logging started')
+          // Console logging started
         } catch (error) {
           // Silently fail console logging to not interfere with container operation
         }
 
         const attachProcess = execa('docker', ['attach', containerName], {
-          stdio: options.debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
+          stdio: ['inherit', 'ignore', 'ignore'],
           cleanup: false,
         })
 
@@ -212,7 +212,7 @@ export const startBrowserCommand = new Command('start-browser')
               sessionName,
               ports.devtoolsPort,
             )
-            console.error('Console logging started')
+            // Console logging started
           } catch (error) {
             // Silently fail console logging to not interfere with container operation
           }

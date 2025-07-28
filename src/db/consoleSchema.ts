@@ -11,3 +11,9 @@ export const consoleMessages = sqliteTable('console_messages', {
     .notNull()
     .default(sql`(unixepoch())`),
 })
+
+export const consoleClearMarkers = sqliteTable('console_clear_markers', {
+  id: text('id').primaryKey(),
+  profileName: text('profile_name').notNull(),
+  clearedAt: integer('cleared_at', { mode: 'timestamp' }).notNull(),
+})

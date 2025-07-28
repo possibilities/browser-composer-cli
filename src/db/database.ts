@@ -1,12 +1,15 @@
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import Database from 'better-sqlite3'
-import { consoleMessages } from './consoleSchema.js'
+import { consoleMessages, consoleClearMarkers } from './consoleSchema.js'
 import { migrations } from './migrations.js'
 import { existsSync, mkdirSync, unlinkSync } from 'fs'
 import { dirname } from 'path'
 
 export function createConsoleDatabase(dbPath: string): {
-  db: BetterSQLite3Database<{ consoleMessages: typeof consoleMessages }>
+  db: BetterSQLite3Database<{
+    consoleMessages: typeof consoleMessages
+    consoleClearMarkers: typeof consoleClearMarkers
+  }>
   sqlite: Database.Database
 } {
   const dbDir = dirname(dbPath)
@@ -47,7 +50,7 @@ export function createConsoleDatabase(dbPath: string): {
   }
 
   const db = drizzle(sqlite, {
-    schema: { consoleMessages },
+    schema: { consoleMessages, consoleClearMarkers },
   })
 
   return { db, sqlite }

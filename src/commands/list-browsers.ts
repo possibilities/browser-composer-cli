@@ -9,7 +9,7 @@ import { containerIsRunning } from '../utils/docker.js'
 import { CONTAINER_PREFIX } from '../utils/constants.js'
 import { SessionConfig } from '../types.js'
 
-export const listCommand = new Command('list')
+export const listBrowsersCommand = new Command('list-browsers')
   .description('List all browser profiles')
   .action(async () => {
     try {

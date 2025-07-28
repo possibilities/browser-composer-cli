@@ -16,7 +16,7 @@ import {
 } from '../utils/errors.js'
 import * as path from 'path'
 
-export const presetSaveCommand = new Command('save')
+export const savePresetCommand = new Command('save-preset')
   .description('Save a browser profile as a reusable preset')
   .argument('<profile-name>', 'Name of the profile to save as preset')
   .argument('<preset-name>', 'Name for the preset')

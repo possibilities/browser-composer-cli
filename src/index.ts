@@ -1,8 +1,15 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
 import packageJson from '../package.json' assert { type: 'json' }
-import { browserCommand } from './commands/browser.js'
-import { presetCommand } from './commands/preset.js'
+import { startBrowserCommand } from './commands/start-browser.js'
+import { listBrowsersCommand } from './commands/list-browsers.js'
+import { stopBrowserCommand } from './commands/stop-browser.js'
+import { removeBrowserCommand } from './commands/remove-browser.js'
+import { showLogsCommand } from './commands/show-logs.js'
+import { clearLogsCommand } from './commands/clear-logs.js'
+import { takeScreenshotCommand } from './commands/take-screenshot.js'
+import { savePresetCommand } from './commands/save-preset.js'
+import { listPresetsCommand } from './commands/list-presets.js'
 import {
   checkDockerAvailable,
   cleanupOrphanedContainers,
@@ -28,8 +35,15 @@ async function main() {
     .description('Browser Composer CLI')
     .version(packageJson.version)
 
-  program.addCommand(browserCommand)
-  program.addCommand(presetCommand)
+  program.addCommand(startBrowserCommand)
+  program.addCommand(listBrowsersCommand)
+  program.addCommand(stopBrowserCommand)
+  program.addCommand(removeBrowserCommand)
+  program.addCommand(showLogsCommand)
+  program.addCommand(clearLogsCommand)
+  program.addCommand(takeScreenshotCommand)
+  program.addCommand(savePresetCommand)
+  program.addCommand(listPresetsCommand)
 
   try {
     program.exitOverride()

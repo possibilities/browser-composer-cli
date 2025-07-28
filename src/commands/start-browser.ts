@@ -35,7 +35,7 @@ import {
   ConsoleLoggerResult,
 } from '../utils/consoleLogger.js'
 
-export const startCommand = new Command('start')
+export const startBrowserCommand = new Command('start-browser')
   .description('Start or attach to a browser container')
   .argument('<profile>', 'Profile name for persistent browser data')
   .argument('[url]', 'Optional URL to open in the browser')

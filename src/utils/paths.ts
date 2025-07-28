@@ -66,3 +66,9 @@ export const getPresetMetadataPath = (presetName: string) => {
 export const getConsoleDatabasePath = (profileName: string) => {
   return path.join(getSessionDir(profileName), 'console.db')
 }
+
+export const getScreenshotsDir = (sessionName: string) => {
+  const screenshotsDir = path.join(getSessionDir(sessionName), 'screenshots')
+  ensureDirSync(screenshotsDir)
+  return screenshotsDir
+}

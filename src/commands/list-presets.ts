@@ -6,7 +6,7 @@ const { readdirSync, readJsonSync, statSync } = fse
 import { getPresetsDir } from '../utils/paths.js'
 import { PresetConfig } from '../types.js'
 
-export const presetListCommand = new Command('list')
+export const listPresetsCommand = new Command('list-presets')
   .description('List all saved presets')
   .action(async () => {
     try {
@@ -20,7 +20,7 @@ export const presetListCommand = new Command('list')
         console.log(chalk.yellow('No presets found'))
         console.log(
           chalk.blue(
-            'Use "browser-composer preset save <profile-name> <preset-name>" to create a preset',
+            'Use "browser-composer save-preset <profile-name> <preset-name>" to create a preset',
           ),
         )
         return

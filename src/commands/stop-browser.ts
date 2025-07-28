@@ -5,7 +5,7 @@ import { CONTAINER_PREFIX } from '../utils/constants.js'
 import { execa } from 'execa'
 import { ContainerError, validateProfileName } from '../utils/errors.js'
 
-export const stopCommand = new Command('stop')
+export const stopBrowserCommand = new Command('stop-browser')
   .description('Stop running browser containers')
   .argument('[profile]', 'Profile name to stop')
   .option('-a, --all', 'Stop all running containers')

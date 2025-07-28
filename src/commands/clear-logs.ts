@@ -7,7 +7,7 @@ import { existsSync } from 'fs'
 import { ulid } from 'ulid'
 import { createConsoleDatabase, runMigrations } from '../db/database.js'
 
-export const clearCommand = new Command('clear')
+export const clearLogsCommand = new Command('clear-logs')
   .description(
     'Clear console log display (marks a point in time, does not delete logs)',
   )

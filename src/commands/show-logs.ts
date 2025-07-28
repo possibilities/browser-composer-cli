@@ -11,7 +11,7 @@ import { desc, eq, gt, and, SQL } from 'drizzle-orm'
 const POLL_INTERVAL_MS = 1000
 const DEFAULT_LOG_LIMIT = 100
 
-export const logsCommand = new Command('logs')
+export const showLogsCommand = new Command('show-logs')
   .description('Show browser console logs')
   .argument('<profile>', 'Profile name')
   .option(

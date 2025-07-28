@@ -9,7 +9,7 @@ import { getSessionDir, getSessionsDir } from '../utils/paths.js'
 import { CONTAINER_PREFIX } from '../utils/constants.js'
 import { ProfileNotFoundError, validateProfileName } from '../utils/errors.js'
 
-export const removeCommand = new Command('remove')
+export const removeBrowserCommand = new Command('remove-browser')
   .description('Remove browser profiles and their data')
   .argument('[profile]', 'Profile name to remove')
   .option('-a, --all', 'Remove all browser profiles')

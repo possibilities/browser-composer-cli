@@ -43,7 +43,7 @@ export const buildImage = async (
 }
 
 export interface RunContainerResult {
-  subprocess: ExecaChildProcess
+  subprocess: ExecaChildProcess | null
   ports: PortConfiguration
 }
 
@@ -60,6 +60,7 @@ export const runContainer = async (
     width,
     height,
     url,
+    detached = false,
   } = options
 
   const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'browser-composer-'))
@@ -70,11 +71,11 @@ export const runContainer = async (
   // Allocate available ports
   const ports = await allocatePorts()
 
-  const isInteractive = process.stdin.isTTY
+  const isInteractive = process.stdin.isTTY && !detached
 
   const runArgs = [
     'run',
-    ...(isInteractive ? ['-it'] : ['-i']),
+    ...(detached ? ['-d'] : isInteractive ? ['-it'] : ['-i']),
     '--rm', // Automatically remove container when it exits
     '--name',
     containerName,
@@ -116,27 +117,40 @@ export const runContainer = async (
 
   await stopContainer(containerName, false)
 
-  const subprocess = execa('docker', runArgs, {
-    stdio: debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
-    cleanup: false,
-  })
+  if (detached) {
+    try {
+      await execa('docker', runArgs, {
+        stdio: debug ? 'inherit' : 'pipe',
+      })
+      removeSync(tmpDir)
+      return { subprocess: null, ports }
+    } catch (error) {
+      removeSync(tmpDir)
+      throw error
+    }
+  } else {
+    const subprocess = execa('docker', runArgs, {
+      stdio: debug ? 'inherit' : ['inherit', 'ignore', 'ignore'],
+      cleanup: false,
+    })
 
-  const forwardSignalToDocker = (signal: NodeJS.Signals) => {
-    subprocess.kill(signal)
+    const forwardSignalToDocker = (signal: NodeJS.Signals) => {
+      subprocess.kill(signal)
+    }
+
+    process.on('SIGINT', forwardSignalToDocker)
+    process.on('SIGTERM', forwardSignalToDocker)
+    process.on('SIGHUP', forwardSignalToDocker)
+
+    subprocess.on('exit', () => {
+      process.removeListener('SIGINT', forwardSignalToDocker)
+      process.removeListener('SIGTERM', forwardSignalToDocker)
+      process.removeListener('SIGHUP', forwardSignalToDocker)
+      removeSync(tmpDir)
+    })
+
+    return { subprocess, ports }
   }
-
-  process.on('SIGINT', forwardSignalToDocker)
-  process.on('SIGTERM', forwardSignalToDocker)
-  process.on('SIGHUP', forwardSignalToDocker)
-
-  subprocess.on('exit', () => {
-    process.removeListener('SIGINT', forwardSignalToDocker)
-    process.removeListener('SIGTERM', forwardSignalToDocker)
-    process.removeListener('SIGHUP', forwardSignalToDocker)
-    removeSync(tmpDir)
-  })
-
-  return { subprocess, ports }
 }
 
 export const stopContainer = async (

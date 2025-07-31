@@ -16,10 +16,16 @@
 
 ### Basic Browser Management
 
-Start a browser with a named profile:
+Start a browser with a named profile (runs in background by default):
 
 ```bash
 browser-composer start-browser my-profile
+```
+
+Start a browser in attached/interactive mode:
+
+```bash
+browser-composer start-browser my-profile --attach
 ```
 
 Start a browser and open a specific URL:

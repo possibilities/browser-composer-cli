@@ -16,6 +16,7 @@ export interface DockerRunOptions {
   width: number
   height: number
   url?: string
+  detached?: boolean
 }
 
 export interface BuildOptions {

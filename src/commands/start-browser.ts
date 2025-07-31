@@ -36,10 +36,11 @@ import {
 } from '../utils/consoleLogger.js'
 
 export const startBrowserCommand = new Command('start-browser')
-  .description('Start or attach to a browser container')
+  .description('Start a browser container (runs in background by default)')
   .argument('<profile>', 'Profile name for persistent browser data')
   .argument('[url]', 'Optional URL to open in the browser')
   .option('-d, --debug', 'Show debug output')
+  .option('--attach', 'Attach to the browser container (interactive mode)')
   .option(
     '--init-with-preset <name>',
     'Initialize new profile from preset (only applies on first run)',
@@ -53,9 +54,7 @@ export const startBrowserCommand = new Command('start-browser')
       let isRunning = await containerIsRunning(containerName)
 
       if (isRunning) {
-        console.log(
-          chalk.green(`Attaching to running container: ${containerName}`),
-        )
+        console.log(chalk.green(`Container already running: ${containerName}`))
 
         let devtoolsPort = '9222'
         try {
@@ -86,54 +85,67 @@ export const startBrowserCommand = new Command('start-browser')
           console.log(chalk.yellow('Could not retrieve port information'))
         }
 
-        // Start console logging
-        let consoleLogger: ConsoleLoggerResult | null = null
-        try {
-          consoleLogger = await startConsoleLogging(sessionName, devtoolsPort)
-          // Console logging started
-        } catch (error) {
-          // Silently fail console logging to not interfere with container operation
-        }
+        if (options.attach) {
+          console.log(chalk.green(`Attaching to container...`))
 
-        const attachProcess = execa('docker', ['attach', containerName], {
-          stdio: ['inherit', 'ignore', 'ignore'],
-          cleanup: false,
-        })
+          let consoleLogger: ConsoleLoggerResult | null = null
+          try {
+            consoleLogger = await startConsoleLogging(sessionName, devtoolsPort)
+          } catch (error) {}
 
-        const cleanup = async () => {
-          if (consoleLogger) {
-            await consoleLogger.cleanup()
+          const attachProcess = execa('docker', ['attach', containerName], {
+            stdio: ['inherit', 'ignore', 'ignore'],
+            cleanup: false,
+          })
+
+          const cleanup = async () => {
+            if (consoleLogger) {
+              await consoleLogger.cleanup()
+            }
           }
-        }
 
-        const forwardSignalToDocker = (signal: NodeJS.Signals) => {
-          attachProcess.kill(signal)
-        }
+          const forwardSignalToDocker = (signal: NodeJS.Signals) => {
+            attachProcess.kill(signal)
+          }
 
-        process.on('SIGINT', forwardSignalToDocker)
-        process.on('SIGTERM', forwardSignalToDocker)
-        process.on('SIGHUP', forwardSignalToDocker)
+          process.on('SIGINT', forwardSignalToDocker)
+          process.on('SIGTERM', forwardSignalToDocker)
+          process.on('SIGHUP', forwardSignalToDocker)
 
-        attachProcess.on('exit', async () => {
-          process.removeListener('SIGINT', forwardSignalToDocker)
-          process.removeListener('SIGTERM', forwardSignalToDocker)
-          process.removeListener('SIGHUP', forwardSignalToDocker)
-          await cleanup()
-        })
+          attachProcess.on('exit', async () => {
+            process.removeListener('SIGINT', forwardSignalToDocker)
+            process.removeListener('SIGTERM', forwardSignalToDocker)
+            process.removeListener('SIGHUP', forwardSignalToDocker)
+            await cleanup()
+          })
 
-        try {
-          await attachProcess
-          await cleanup()
+          try {
+            await attachProcess
+            await cleanup()
+            process.exit(0)
+          } catch (error) {
+            await cleanup()
+            const containerStillRunning =
+              await containerIsRunning(containerName)
+            if (!containerStillRunning) {
+              console.log(chalk.yellow('Container stopped, restarting...'))
+              isRunning = false
+            } else {
+              process.exit(1)
+            }
+          }
+        } else {
+          await startConsoleLogging(sessionName, devtoolsPort).catch(() => {})
+
+          console.log(
+            chalk.green('Browser continues running in the background'),
+          )
+          console.log(
+            chalk.gray(
+              `To attach: browser-composer start-browser ${sessionName} --attach`,
+            ),
+          )
           process.exit(0)
-        } catch (error) {
-          await cleanup()
-          const containerStillRunning = await containerIsRunning(containerName)
-          if (!containerStillRunning) {
-            console.log(chalk.yellow('Container stopped, restarting...'))
-            isRunning = false
-          } else {
-            process.exit(1)
-          }
         }
       }
 
@@ -198,49 +210,57 @@ export const startBrowserCommand = new Command('start-browser')
             width: DEFAULT_WIDTH,
             height: DEFAULT_HEIGHT,
             url,
+            detached: !options.attach,
           },
           options.debug,
         )
 
         displayPortInfo(ports)
 
-        // Start console logging after a brief delay to allow Chrome to initialize
-        let consoleLogger: ConsoleLoggerResult | null = null
-        setTimeout(async () => {
+        if (options.attach && dockerProcess) {
+          let consoleLogger: ConsoleLoggerResult | null = null
+          startConsoleLogging(sessionName, ports.devtoolsPort)
+            .then(result => {
+              consoleLogger = result
+            })
+            .catch(() => {})
+
+          const cleanup = async () => {
+            if (consoleLogger) {
+              await consoleLogger.cleanup()
+            }
+          }
+
+          // Handle cleanup on process exit
+          const handleExit = async () => {
+            await cleanup()
+            process.exit(0)
+          }
+
+          process.on('SIGINT', handleExit)
+          process.on('SIGTERM', handleExit)
+
           try {
-            consoleLogger = await startConsoleLogging(
-              sessionName,
-              ports.devtoolsPort,
-            )
-            // Console logging started
+            await dockerProcess
           } catch (error) {
-            // Silently fail console logging to not interfere with container operation
+            if (options.debug && error) {
+              console.error(chalk.red('Docker process error:'), error)
+            }
+          } finally {
+            await cleanup()
+            process.exit(0)
           }
-        }, 3000)
+        } else {
+          await startConsoleLogging(sessionName, ports.devtoolsPort).catch(
+            () => {},
+          )
 
-        const cleanup = async () => {
-          if (consoleLogger) {
-            await consoleLogger.cleanup()
-          }
-        }
-
-        // Handle cleanup on process exit
-        const handleExit = async () => {
-          await cleanup()
-          process.exit(0)
-        }
-
-        process.on('SIGINT', handleExit)
-        process.on('SIGTERM', handleExit)
-
-        try {
-          await dockerProcess
-        } catch (error) {
-          if (options.debug && error) {
-            console.error(chalk.red('Docker process error:'), error)
-          }
-        } finally {
-          await cleanup()
+          console.log(chalk.green('Browser started in the background'))
+          console.log(
+            chalk.gray(
+              `To attach: browser-composer start-browser ${sessionName} --attach`,
+            ),
+          )
           process.exit(0)
         }
       }

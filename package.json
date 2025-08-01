@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsup && cp -r src/scripts dist/",
-    "build:watch": "nodemon --watch src/ --ext ts --exec tsup",
+    "build:watch": "nodemon --watch src/ --ext ts,sh --exec \"tsup && cp -r src/scripts dist/\"",
     "format": "prettier --write \"**/*.{js,mjs,jsx,ts,tsx,json,md,mdx,css,yml,yaml}\"",
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",

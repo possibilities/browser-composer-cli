@@ -40,6 +40,12 @@ List all browser profiles:
 browser-composer list-browsers
 ```
 
+Show details for a specific browser profile:
+
+```bash
+browser-composer show-browser my-profile
+```
+
 Stop a specific browser:
 
 ```bash

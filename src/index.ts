@@ -3,6 +3,7 @@ import chalk from 'chalk'
 import packageJson from '../package.json' assert { type: 'json' }
 import { startBrowserCommand } from './commands/start-browser.js'
 import { listBrowsersCommand } from './commands/list-browsers.js'
+import { showBrowserCommand } from './commands/show-browser.js'
 import { stopBrowserCommand } from './commands/stop-browser.js'
 import { removeBrowserCommand } from './commands/remove-browser.js'
 import { showLogsCommand } from './commands/show-logs.js'
@@ -37,6 +38,7 @@ async function main() {
 
   program.addCommand(startBrowserCommand)
   program.addCommand(listBrowsersCommand)
+  program.addCommand(showBrowserCommand)
   program.addCommand(stopBrowserCommand)
   program.addCommand(removeBrowserCommand)
   program.addCommand(showLogsCommand)

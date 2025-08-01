@@ -2,12 +2,12 @@ import { Command } from 'commander'
 import fse from 'fs-extra'
 import * as path from 'path'
 import chalk from 'chalk'
-import { execa } from 'execa'
 const { readdirSync, readJsonSync, statSync } = fse
 import { getSessionsDir } from '../utils/paths.js'
 import { containerIsRunning } from '../utils/docker.js'
 import { CONTAINER_PREFIX } from '../utils/constants.js'
 import { SessionConfig } from '../types.js'
+import { getContainerPortMappings } from '../utils/portMapping.js'
 
 export const listBrowsersCommand = new Command('list-browsers')
   .description('List all browser profiles')
@@ -60,44 +60,9 @@ export const listBrowsersCommand = new Command('list-browsers')
           }
 
           if (isRunning) {
-            try {
-              const { stdout } = await execa('docker', ['port', containerName])
-              const portMappings = stdout.split('\n').filter(Boolean)
-
-              const extractPortInfo = (
-                mapping: string,
-                defaultPort: string,
-              ) => {
-                const match = mapping.match(/([0-9.]+):([0-9]+)$/)
-                if (match) {
-                  return {
-                    host: match[1] === '0.0.0.0' ? 'localhost' : match[1],
-                    port: match[2],
-                  }
-                }
-                return { host: 'localhost', port: defaultPort }
-              }
-
-              const webrtcInfo = extractPortInfo(
-                portMappings.find(p => p.includes('8080/tcp')) || '',
-                '8080',
-              )
-              const devtoolsInfo = extractPortInfo(
-                portMappings.find(p => p.includes('9222/tcp')) || '',
-                '9222',
-              )
-              const apiInfo = extractPortInfo(
-                portMappings.find(p => p.includes('10001/tcp')) || '',
-                '10001',
-              )
-
-              profileData.ports = {
-                webrtc: webrtcInfo,
-                devtools: devtoolsInfo,
-                api: apiInfo,
-              }
-            } catch {
-              // If we can't get port info, just skip it
+            const ports = await getContainerPortMappings(containerName)
+            if (ports) {
+              profileData.ports = ports
             }
           }
 

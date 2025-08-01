@@ -60,7 +60,6 @@ export async function runMigrations(
   _db: BetterSQLite3Database<any>,
   sqlite: Database.Database,
 ) {
-  // Create migrations table if it doesn't exist
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS __drizzle_migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +68,6 @@ export async function runMigrations(
     )
   `)
 
-  // Apply migrations
   for (const migration of migrations) {
     const existingMigration = sqlite
       .prepare('SELECT 1 FROM __drizzle_migrations WHERE hash = ?')

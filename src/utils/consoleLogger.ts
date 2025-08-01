@@ -22,7 +22,6 @@ export async function startConsoleLogging(
   const maxRetries = 10
   const retryDelay = 1000
 
-  // Retry connection to Chrome DevTools
   while (retryCount < maxRetries) {
     try {
       cdpClient = await CDP({ port: parseInt(devtoolsPort.toString()) })
@@ -41,29 +40,21 @@ export async function startConsoleLogging(
 
   const { Runtime, Console, Page } = cdpClient
 
-  // Track current page URL
   let currentPageUrl: string | null = null
 
-  // Enable Page domain to track navigation
   await Page.enable()
 
-  // Get initial URL
   try {
     const { frameTree } = await Page.getFrameTree()
     currentPageUrl = frameTree.frame.url || null
-  } catch (error) {
-    // Ignore errors getting initial URL
-  }
+  } catch (error) {}
 
-  // Update URL on navigation
   Page.frameNavigated(({ frame }: any) => {
     if (frame.parentId === undefined) {
-      // Main frame only
       currentPageUrl = frame.url || null
     }
   })
 
-  // Enable console domains
   await Console.enable()
   Console.messageAdded(({ message }: any) => {
     const id = ulid()
@@ -81,9 +72,7 @@ export async function startConsoleLogging(
           url: message.url || message.source || currentPageUrl,
         })
         .run()
-    } catch (error: any) {
-      // Silently ignore errors to not interfere with browser operation
-    }
+    } catch (error: any) {}
   })
 
   await Runtime.enable()
@@ -96,7 +85,6 @@ export async function startConsoleLogging(
       .join(' ')
 
     try {
-      // Extract URL from stack trace if available
       let url = null
 
       if (
@@ -112,23 +100,18 @@ export async function startConsoleLogging(
         .values({
           id,
           timestamp,
-          level: type, // Use console method type as level (log, error, warn, etc.)
+          level: type,
           text: argsText,
           url: url || currentPageUrl,
         })
         .run()
-    } catch (error: any) {
-      // Silently ignore errors to not interfere with browser operation
-    }
+    } catch (error: any) {}
   })
 
-  // Cleanup function
   const cleanup = async () => {
     try {
       await cdpClient.close()
-    } catch (error) {
-      // Ignore errors during cleanup
-    }
+    } catch (error) {}
     sqlite.close()
   }
 

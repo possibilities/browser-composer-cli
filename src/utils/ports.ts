@@ -20,7 +20,6 @@ const checkPortAvailable = (
 
       server.listen(port, '0.0.0.0')
     } else {
-      // For UDP, we need to use dgram module
       const server = dgram.createSocket('udp4')
 
       server.once('error', () => {
@@ -87,12 +86,10 @@ export interface PortConfiguration {
 }
 
 export const allocatePorts = async (): Promise<PortConfiguration> => {
-  // Find ports in common ranges that are likely to be available
   const webrtcPort = await findAvailablePort(8080, 8180)
   const devtoolsPort = await findAvailablePort(9222, 9322)
   const apiPort = await findAvailablePort(10001, 10101)
 
-  // Find a range of 101 consecutive ports for UDP
   const udpRangeStart = await findAvailablePortRange(56000, 101, 50, 'udp')
   const udpRangeEnd = udpRangeStart + 100
 

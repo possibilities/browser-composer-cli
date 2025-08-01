@@ -74,6 +74,6 @@ export const getChromeProfileInitScript = () => {
   const currentFileUrl = import.meta.url
   const currentFilePath = fileURLToPath(currentFileUrl)
   const currentDir = path.dirname(currentFilePath)
-  // In production, the script is in dist/scripts
+
   return path.join(currentDir, 'scripts', 'chrome-profile-init.sh')
 }

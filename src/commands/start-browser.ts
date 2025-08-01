@@ -231,7 +231,6 @@ export const startBrowserCommand = new Command('start-browser')
             }
           }
 
-          // Handle cleanup on process exit
           const handleExit = async () => {
             await cleanup()
             process.exit(0)

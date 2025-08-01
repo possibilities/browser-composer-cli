@@ -76,10 +76,8 @@ export const runContainer = async (
   const finalChromiumFlags = url ? `${chromiumFlags} ${url}` : chromiumFlags
   writeFileSync(flagsFile, finalChromiumFlags)
 
-  // Get the path to our Chrome profile init script
   const initScriptPath = getChromeProfileInitScript()
 
-  // Allocate available ports
   const ports = await allocatePorts()
 
   const isInteractive = process.stdin.isTTY && !detached
@@ -87,7 +85,7 @@ export const runContainer = async (
   const runArgs = [
     'run',
     ...(detached ? ['-d'] : isInteractive ? ['-it'] : ['-i']),
-    '--rm', // Automatically remove container when it exits
+    '--rm',
     '--name',
     containerName,
     '--privileged',

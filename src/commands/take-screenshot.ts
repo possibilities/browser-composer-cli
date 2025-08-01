@@ -12,7 +12,8 @@ export const takeScreenshotCommand = new Command('take-screenshot')
   .description('Take a screenshot of the browser')
   .argument('<profile>', 'Profile name')
   .argument('[selector]', 'Optional DOM selector to focus on')
-  .action(async (profile, selector) => {
+  .option('--desktop', 'Capture entire desktop instead of browser viewport')
+  .action(async (profile, selector, options) => {
     try {
       validateProfileName(profile)
 
@@ -26,6 +27,71 @@ export const takeScreenshotCommand = new Command('take-screenshot')
       if (!(await containerIsRunning(containerName))) {
         process.stderr.write(`Container ${containerName} is not running\n`)
         process.exit(1)
+      }
+
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/T/, '-')
+        .replace(/:/g, '-')
+        .replace(/\..+/, '')
+        .replace(/Z/, '')
+      const filename = `screenshot-${timestamp}.png`
+      const screenshotsDir = getScreenshotsDir(profile)
+      const filepath = path.join(screenshotsDir, filename)
+
+      if (options.desktop) {
+        if (selector) {
+          process.stderr.write(
+            'Warning: selector argument is ignored when using --desktop flag\n',
+          )
+        }
+
+        const containerTempPath = '/tmp/browser_composer_desktop_screenshot.png'
+
+        try {
+          await execa('docker', [
+            'exec',
+            containerName,
+            'rm',
+            '-f',
+            containerTempPath,
+          ]).catch(() => {})
+
+          await execa('docker', [
+            'exec',
+            '-e',
+            'DISPLAY=:1',
+            containerName,
+            'scrot',
+            containerTempPath,
+          ])
+
+          const { stdout: screenshotData } = await execa(
+            'docker',
+            ['exec', containerName, 'cat', containerTempPath],
+            {
+              encoding: 'buffer',
+              maxBuffer: 10 * 1024 * 1024,
+            },
+          )
+          writeFileSync(filepath, screenshotData)
+
+          await execa('docker', [
+            'exec',
+            containerName,
+            'rm',
+            '-f',
+            containerTempPath,
+          ]).catch(() => {})
+
+          console.log(filepath)
+          process.exit(0)
+        } catch (error: any) {
+          process.stderr.write(
+            `Error capturing desktop screenshot: ${error.message || error}\n`,
+          )
+          process.exit(1)
+        }
       }
 
       let devtoolsPort = '9222'
@@ -104,16 +170,6 @@ export const takeScreenshotCommand = new Command('take-screenshot')
 
       const screenshot = await Page.captureScreenshot(screenshotOptions)
       const buffer = Buffer.from(screenshot.data, 'base64')
-
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/T/, '-')
-        .replace(/:/g, '-')
-        .replace(/\..+/, '')
-        .replace(/Z/, '')
-      const filename = `screenshot-${timestamp}.png`
-      const screenshotsDir = getScreenshotsDir(profile)
-      const filepath = path.join(screenshotsDir, filename)
 
       writeFileSync(filepath, buffer)
       console.log(filepath)

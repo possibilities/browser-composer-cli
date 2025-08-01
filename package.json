@@ -9,7 +9,7 @@
     "browser-composer": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && cp -r src/scripts dist/",
     "build:watch": "nodemon --watch src/ --ext ts --exec tsup",
     "format": "prettier --write \"**/*.{js,mjs,jsx,ts,tsx,json,md,mdx,css,yml,yaml}\"",
     "typecheck": "tsc --noEmit",

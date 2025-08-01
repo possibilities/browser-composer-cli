@@ -6,9 +6,13 @@ import chalk from 'chalk'
 import { DockerRunOptions } from '../types.js'
 import { allocatePorts, PortConfiguration } from './ports.js'
 import { DockerError, toError } from './errors.js'
-import { getSessionsDir, getTempBuildDir } from './paths.js'
+import {
+  getSessionsDir,
+  getTempBuildDir,
+  getChromeProfileInitScript,
+} from './paths.js'
 import { CONTAINER_PREFIX } from './constants.js'
-import { cloneOrUpdateRepo } from './git.js'
+import { syncKernelImagesRepository } from './git.js'
 const { writeFileSync, mkdtempSync, removeSync, readdirSync, statSync } = fse
 
 export const imageExists = async (imageName: string): Promise<boolean> => {
@@ -30,6 +34,10 @@ export const buildImage = async (
     'images',
     'chromium-headful',
     'build-docker.sh',
+  )
+
+  console.log(
+    chalk.blue('Running Docker build (this may take several minutes)...'),
   )
 
   await execa('bash', [scriptPath], {
@@ -67,6 +75,9 @@ export const runContainer = async (
   const flagsFile = path.join(tmpDir, 'chromium-flags')
   const finalChromiumFlags = url ? `${chromiumFlags} ${url}` : chromiumFlags
   writeFileSync(flagsFile, finalChromiumFlags)
+
+  // Get the path to our Chrome profile init script
+  const initScriptPath = getChromeProfileInitScript()
 
   // Allocate available ports
   const ports = await allocatePorts()
@@ -112,6 +123,10 @@ export const runContainer = async (
     `${ports.udpRangeStart}-${ports.udpRangeEnd}:${ports.udpRangeStart}-${ports.udpRangeEnd}/udp`,
     '--mount',
     `type=bind,src=${flagsFile},dst=/chromium/flags,ro`,
+    '--mount',
+    `type=bind,src=${initScriptPath},dst=/browser-composer-init.sh,ro`,
+    '--entrypoint',
+    '/browser-composer-init.sh',
     imageName,
   ]
 
@@ -236,14 +251,25 @@ export const cleanupOrphanedContainers = async (): Promise<void> => {
 export const ensureDockerImage = async (
   imageName: string,
   debug: boolean = false,
+  forceRebuild: boolean = false,
 ): Promise<void> => {
-  if (!(await imageExists(imageName))) {
-    console.log(chalk.yellow('Docker image not found. Building...'))
+  if (forceRebuild || !(await imageExists(imageName))) {
+    if (forceRebuild && (await imageExists(imageName))) {
+      console.log(chalk.yellow('Removing existing Docker image...'))
+      try {
+        await execa('docker', ['rmi', imageName])
+      } catch (error) {
+        console.warn(chalk.yellow('Warning: Could not remove existing image'))
+      }
+    }
+
+    console.log(chalk.yellow('Building Docker image...'))
     const buildDir = getTempBuildDir()
 
     try {
-      await cloneOrUpdateRepo(buildDir, debug)
+      await syncKernelImagesRepository(buildDir, debug, forceRebuild)
       await buildImage(buildDir, imageName, debug)
+      console.log(chalk.green('Successfully built Docker image'))
     } catch (error) {
       throw new DockerError(
         `Failed to build Docker image: ${error}`,

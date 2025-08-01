@@ -11,6 +11,7 @@ import { clearLogsCommand } from './commands/clear-logs.js'
 import { takeScreenshotCommand } from './commands/take-screenshot.js'
 import { savePresetCommand } from './commands/save-preset.js'
 import { listPresetsCommand } from './commands/list-presets.js'
+import { buildImageCommand } from './commands/build-image.js'
 import {
   checkDockerAvailable,
   cleanupOrphanedContainers,
@@ -46,6 +47,7 @@ async function main() {
   program.addCommand(takeScreenshotCommand)
   program.addCommand(savePresetCommand)
   program.addCommand(listPresetsCommand)
+  program.addCommand(buildImageCommand)
 
   try {
     program.exitOverride()

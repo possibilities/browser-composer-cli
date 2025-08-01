@@ -1,6 +1,7 @@
 import * as path from 'path'
 import * as os from 'os'
 import fse from 'fs-extra'
+import { fileURLToPath } from 'url'
 const { ensureDirSync } = fse
 
 export const getAppDataDir = () => {
@@ -43,10 +44,6 @@ export const getTempBuildDir = () => {
   return tempDir
 }
 
-export const getLocalKernelImagesPath = () => {
-  return path.join(os.homedir(), 'src', 'kernel-images')
-}
-
 export const getPresetsDir = () => {
   const presetsDir = path.join(getAppDataDir(), 'presets')
   ensureDirSync(presetsDir)
@@ -71,4 +68,12 @@ export const getScreenshotsDir = (sessionName: string) => {
   const screenshotsDir = path.join(getSessionDir(sessionName), 'screenshots')
   ensureDirSync(screenshotsDir)
   return screenshotsDir
+}
+
+export const getChromeProfileInitScript = () => {
+  const currentFileUrl = import.meta.url
+  const currentFilePath = fileURLToPath(currentFileUrl)
+  const currentDir = path.dirname(currentFilePath)
+  // In production, the script is in dist/scripts
+  return path.join(currentDir, 'scripts', 'chrome-profile-init.sh')
 }

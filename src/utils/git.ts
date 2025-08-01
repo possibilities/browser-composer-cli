@@ -1,47 +1,65 @@
 import { execa } from 'execa'
 import fse from 'fs-extra'
-import * as path from 'path'
 import { KERNEL_IMAGES_REPO } from './constants.js'
-import { getLocalKernelImagesPath } from './paths.js'
-const { existsSync, copySync } = fse
+const { existsSync, removeSync } = fse
 
-export const cloneOrUpdateRepo = async (
+interface NodeError extends Error {
+  code?: string
+}
+
+async function removeDirectoryWithPermissionFallback(
+  targetDir: string,
+): Promise<void> {
+  try {
+    removeSync(targetDir)
+  } catch (error) {
+    const nodeError = error as NodeError
+    if (nodeError.code === 'EACCES') {
+      console.log('Permission denied, trying with sudo...')
+      try {
+        await execa('sudo', ['rm', '-rf', targetDir])
+      } catch (sudoError) {
+        throw new Error(
+          `Failed to remove directory ${targetDir}: ${nodeError.message}`,
+        )
+      }
+    } else {
+      throw error
+    }
+  }
+}
+
+export const syncKernelImagesRepository = async (
   targetDir: string,
   debug: boolean = false,
+  forceRefresh: boolean = false,
 ) => {
-  const localKernelImages = getLocalKernelImagesPath()
+  if (forceRefresh || !existsSync(targetDir)) {
+    if (existsSync(targetDir)) {
+      console.log('Removing existing kernel-images directory...')
+      await removeDirectoryWithPermissionFallback(targetDir)
+    }
 
-  // If local kernel-images exists, copy from there to get local changes
-  if (existsSync(localKernelImages)) {
-    console.log('Copying from local kernel-images repository...')
-    copySync(localKernelImages, targetDir, {
-      filter: src => {
-        // Skip .git directory and other build artifacts
-        const relativePath = path.relative(localKernelImages, src)
-        if (relativePath.includes('.git')) return false
-        if (relativePath.includes('node_modules')) return false
-        if (relativePath.includes('.tmp')) return false
-        if (relativePath.includes('.rootfs')) return false
-        if (relativePath.includes('recordings')) return false
-        if (relativePath.includes('chrome-user-data')) return false
-        return true
-      },
+    console.log('Cloning kernel-images repository from GitHub...')
+    await execa('git', ['clone', KERNEL_IMAGES_REPO, targetDir], {
+      stdio: debug ? 'inherit' : 'pipe',
     })
+    console.log('✓ Repository cloned successfully')
   } else {
-    // Fall back to cloning from git
-    const gitDir = path.join(targetDir, '.git')
-
-    if (existsSync(gitDir)) {
-      console.log('Updating existing repository...')
+    console.log('Updating existing kernel-images repository...')
+    try {
       await execa('git', ['pull'], {
         cwd: targetDir,
         stdio: debug ? 'inherit' : 'pipe',
       })
-    } else {
-      console.log('Cloning kernel-images repository...')
+      console.log('✓ Repository updated successfully')
+    } catch (error) {
+      console.log('Pull failed, removing and recloning...')
+      await removeDirectoryWithPermissionFallback(targetDir)
       await execa('git', ['clone', KERNEL_IMAGES_REPO, targetDir], {
         stdio: debug ? 'inherit' : 'pipe',
       })
+      console.log('✓ Repository cloned successfully')
     }
   }
 }

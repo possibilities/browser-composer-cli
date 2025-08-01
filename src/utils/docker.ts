@@ -110,6 +110,8 @@ export const runContainer = async (
     '-e',
     `WIDTH=${width}`,
     '-e',
+    `NEKO_DESKTOP_SCREEN=${width}x${height}@60`,
+    '-e',
     'ENABLE_WEBRTC=true',
     '-e',
     'WITH_KERNEL_IMAGES_API=true',

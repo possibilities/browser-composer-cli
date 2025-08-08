@@ -7,6 +7,8 @@ import {
   runContainer,
   containerIsRunning,
   ensureDockerImage,
+  stopContainer,
+  stopContainerSync,
 } from '../utils/docker.js'
 import { execa } from 'execa'
 import {
@@ -102,20 +104,33 @@ export const startBrowserCommand = new Command('start-browser')
             if (consoleLogger) {
               await consoleLogger.cleanup()
             }
+            await stopContainer(containerName, options.debug)
           }
 
-          const forwardSignalToDocker = (signal: NodeJS.Signals) => {
-            attachProcess.kill(signal)
+          const handleTerminationSignal = (signal: NodeJS.Signals) => {
+            console.log(
+              chalk.yellow(`\nReceived ${signal}, stopping container...`),
+            )
+            process.removeListener('SIGINT', handleTerminationSignal)
+            process.removeListener('SIGTERM', handleTerminationSignal)
+            process.removeListener('SIGHUP', handleTerminationSignal)
+
+            if (consoleLogger) {
+              consoleLogger.cleanup().catch(() => {})
+            }
+            stopContainerSync(containerName, options.debug)
+            console.log(chalk.green('Container stopped'))
+            process.exit(0)
           }
 
-          process.on('SIGINT', forwardSignalToDocker)
-          process.on('SIGTERM', forwardSignalToDocker)
-          process.on('SIGHUP', forwardSignalToDocker)
+          process.on('SIGINT', handleTerminationSignal)
+          process.on('SIGTERM', handleTerminationSignal)
+          process.on('SIGHUP', handleTerminationSignal)
 
           attachProcess.on('exit', async () => {
-            process.removeListener('SIGINT', forwardSignalToDocker)
-            process.removeListener('SIGTERM', forwardSignalToDocker)
-            process.removeListener('SIGHUP', forwardSignalToDocker)
+            process.removeListener('SIGINT', handleTerminationSignal)
+            process.removeListener('SIGTERM', handleTerminationSignal)
+            process.removeListener('SIGHUP', handleTerminationSignal)
             await cleanup()
           })
 
@@ -229,15 +244,28 @@ export const startBrowserCommand = new Command('start-browser')
             if (consoleLogger) {
               await consoleLogger.cleanup()
             }
+            await stopContainer(containerName, options.debug)
           }
 
-          const handleExit = async () => {
-            await cleanup()
+          const handleTerminationSignal = (signal: NodeJS.Signals) => {
+            console.log(
+              chalk.yellow(`\nReceived ${signal}, stopping container...`),
+            )
+            process.removeListener('SIGINT', handleTerminationSignal)
+            process.removeListener('SIGTERM', handleTerminationSignal)
+            process.removeListener('SIGHUP', handleTerminationSignal)
+
+            if (consoleLogger) {
+              consoleLogger.cleanup().catch(() => {})
+            }
+            stopContainerSync(containerName, options.debug)
+            console.log(chalk.green('Container stopped'))
             process.exit(0)
           }
 
-          process.on('SIGINT', handleExit)
-          process.on('SIGTERM', handleExit)
+          process.on('SIGINT', handleTerminationSignal)
+          process.on('SIGTERM', handleTerminationSignal)
+          process.on('SIGHUP', handleTerminationSignal)
 
           try {
             await dockerProcess

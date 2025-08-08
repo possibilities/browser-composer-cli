@@ -1,4 +1,4 @@
-import { execa, ExecaChildProcess } from 'execa'
+import { execa, ExecaChildProcess, execaSync } from 'execa'
 import * as path from 'path'
 import fse from 'fs-extra'
 import * as os from 'os'
@@ -177,6 +177,43 @@ export const stopContainer = async (
       stdio: debug ? 'inherit' : 'pipe',
     })
   } catch {}
+}
+
+export const stopContainerSync = (
+  containerName: string,
+  debug: boolean = false,
+) => {
+  try {
+    // Force remove the container
+    execaSync('docker', ['rm', '-f', containerName], {
+      stdio: debug ? 'inherit' : 'pipe',
+    })
+
+    // Poll until container is actually gone (max 30 seconds)
+    const maxAttempts = 300 // 300 * 100ms = 30 seconds
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        // Check if container still exists
+        execaSync('docker', ['inspect', containerName], {
+          stdio: 'pipe',
+        })
+        // If inspect succeeds, container still exists, wait a bit
+        execaSync('sleep', ['0.1'], { stdio: 'pipe' }) // 100ms
+      } catch {
+        // Container no longer exists, we're done
+        if (debug) {
+          console.log(
+            `Container ${containerName} stopped after ${(i + 1) * 100}ms`,
+          )
+        }
+        break
+      }
+    }
+  } catch (error) {
+    if (debug) {
+      console.error('Failed to stop container:', error)
+    }
+  }
 }
 
 export const containerIsRunning = async (
